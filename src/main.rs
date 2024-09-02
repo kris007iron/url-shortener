@@ -31,14 +31,14 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
         .execute(&**pool)
         .await
         .map_err(|_| Status::InternalServerError)?;
-    Ok(format!("https://url-shortener.shuttleapp.rs/{id}"))
+    Ok(format!("https://shortrl.shuttleapp.rs/{id}"))
 }
 
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     let rocket = rocket::build()
         .mount("/", routes![index])
-        .mount("/", routes![redirect, shorten]);
-
+        .mount("/", routes![redirect, shorten])
+        .manage(_pool);
     Ok(rocket.into())
 }
