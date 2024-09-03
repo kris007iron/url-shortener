@@ -17,12 +17,27 @@
 
 <body>
     <h1>Shortrl - shorten your url</h1>
-    <p style="color: black;">/Data</p>
 
     <input type="text" name="longUrl" id="longUrl">
     <label for="longUrl">Long URL</label>
-
     <button onclick="shortenUrl()">Shorten</button>
+
+    <script>
+        //Ok(format!("https://shortrl.shuttleapp.rs/{id}")) endpoint is at shortrl.shuttleapp.rs/ and it take plain text as input
+        //also it returns plain text as output
+        //so we can use fetch api to send request to the server
+
+        async function shortenUrl()
+        {
+            const longUrl = document.getElementById('longUrl').value;
+            const response = await fetch('https://shortrl.shuttleapp.rs/', {
+                method: 'POST',
+                body: longUrl
+            });
+            const shortUrl = await response.text();
+            alert(shortUrl);
+        }
+    </script>
 </body>
 
 </html>

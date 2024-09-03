@@ -7,14 +7,11 @@ use url::Url;
 
 #[get("/")]
 async fn index() -> Option<NamedFile> {
-    NamedFile::open(Path::new("frontend/index.html")).await.ok()
+    NamedFile::open(Path::new("src/frontend/index.html"))
+        .await
+        .ok()
 }
 
-// Serve the 1712.html file when accessing "/1712"
-#[get("/1712")]
-async fn special_page() -> Option<NamedFile> {
-    NamedFile::open(Path::new("frontend/1712.html")).await.ok()
-}
 #[get("/<id>")]
 async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> {
     let url: (String,) = sqlx::query_as("SELECT url FROM urls WHERE id = $1")
@@ -44,7 +41,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     let rocket = rocket::build()
-        .mount("/", routes![index, special_page])
+        .mount("/", routes![index])
         .mount("/", routes![redirect, shorten])
         .manage(_pool);
     Ok(rocket.into())
