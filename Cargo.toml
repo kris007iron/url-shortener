@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.38"
 nanoid = "0.4.0"
 rocket = "0.5.0"
 serde = { version = "1.0.209", features = ["derive"] }
 shuttle-rocket = "0.47.0"
 shuttle-runtime = "0.47.0"
 shuttle-shared-db = { version = "0.47.0", features = ["postgres", "sqlx"] }
-sqlx = "0.7.1" 
+sqlx = { version = "0.7.1", features = ["postgres", "chrono"] } 
 tokio = "1.26.0"
 url = "2.5.2"
