@@ -33,7 +33,7 @@ async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> 
 async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
     //generate random integer from 6 to 20
 
-    let id = &nanoid::nanoid!(21);
+    let id = &nanoid::nanoid!(10);
     let p_url = match Url::parse(&url) {
         Ok(url) => url,
         Err(_) => return Err(Status::UnprocessableEntity),
@@ -66,7 +66,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
             Ok(_) => {}
             Err(_) => return Err(Status::InternalServerError),
         };
-        return Ok(format!("shortrl.shuttleapp.rs/{id}", id = id.0));
+        return Ok(format!("https://shortrl.shuttleapp.rs/{id}", id = id.0));
     } else {
         let expiration_date: DateTime<Utc> = DateTime::from(Utc::now() + Duration::hours(24));
         match sqlx::query("INSERT INTO urls(id, url, expiration_date) VALUES ($1, $2, $3)")
@@ -79,7 +79,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
             Ok(_) => {}
             Err(_) => return Err(Status::InternalServerError),
         };
-        Ok(format!("shortrl.shuttleapp.rs/{id}"))
+        Ok(format!("https://shortrl.shuttleapp.rs/{id}"))
     }
 }
 
