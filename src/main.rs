@@ -52,6 +52,16 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
             Ok(result) => result,
             Err(_) => return Err(Status::InternalServerError),
         };
+        let expiration_date: DateTime<Utc> = DateTime::from(Utc::now() + Duration::hours(24));
+        match sqlx::query("UPDATE urls SET expiration_date = $1 WHERE id = $2")
+            .bind(expiration_date)
+            .bind(&id.0)
+            .execute(&**pool)
+            .await
+        {
+            Ok(_) => {}
+            Err(_) => return Err(Status::InternalServerError),
+        };
         return Ok(format!("https://shortrl.shuttleapp.rs/{id}", id = id.0));
     } else {
         let expiration_date: DateTime<Utc> = DateTime::from(Utc::now() + Duration::hours(24));
