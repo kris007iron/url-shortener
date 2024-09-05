@@ -116,6 +116,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn test_invalid_url() {
+        dotenv::dotenv().ok();
         let pool = PgPool::connect(
             std::env::var("CONN_STRING")
                 .expect("CONN_STRING not set")
