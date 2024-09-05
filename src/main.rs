@@ -123,7 +123,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let client = Client::tracked(rocket::build().manage(pool)).await.unwrap();
+        let client = Client::tracked(rocket::build().manage(pool).mount("/", routes![shorten]))
+            .await
+            .unwrap();
 
         let response = client.post("/").body("invalid-url").dispatch().await;
 
