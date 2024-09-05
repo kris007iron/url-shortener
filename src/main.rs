@@ -66,7 +66,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
             Ok(_) => {}
             Err(_) => return Err(Status::InternalServerError),
         };
-        return Ok(format!("https://shortrl.shuttleapp.rs/{id}", id = id.0));
+        return Ok(format!("shortrl.shuttleapp.rs/{id}", id = id.0));
     } else {
         let expiration_date: DateTime<Utc> = DateTime::from(Utc::now() + Duration::hours(24));
         match sqlx::query("INSERT INTO urls(id, url, expiration_date) VALUES ($1, $2, $3)")
@@ -79,7 +79,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
             Ok(_) => {}
             Err(_) => return Err(Status::InternalServerError),
         };
-        Ok(format!("https://shortrl.shuttleapp.rs/{id}"))
+        Ok(format!("shortrl.shuttleapp.rs/{id}"))
     }
 }
 
