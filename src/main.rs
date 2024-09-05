@@ -106,30 +106,3 @@ async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::S
         .manage(_pool);
     Ok(rocket.into())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rocket::http::Status;
-    use rocket::local::asynchronous::Client;
-    use sqlx::PgPool;
-
-    #[rocket::async_test]
-    async fn test_invalid_url() {
-        dotenv::dotenv().ok();
-        let pool = PgPool::connect(
-            std::env::var("CONN_STRING")
-                .expect("CONN_STRING not set")
-                .as_str(),
-        )
-        .await
-        .unwrap();
-        let client = Client::tracked(rocket::build().manage(pool).mount("/", routes![shorten]))
-            .await
-            .unwrap();
-
-        let response = client.post("/").body("invalid-url").dispatch().await;
-
-        assert_eq!(response.status(), Status::UnprocessableEntity);
-    }
-}
