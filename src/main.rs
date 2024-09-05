@@ -72,7 +72,7 @@ async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
         match sqlx::query("INSERT INTO urls(id, url, expiration_date) VALUES ($1, $2, $3)")
             .bind(id)
             .bind(p_url.as_str())
-            .bind(expiration_date) //test it cuz there are null values in db
+            .bind(expiration_date)
             .execute(&**pool)
             .await
         {

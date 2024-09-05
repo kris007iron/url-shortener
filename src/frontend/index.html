@@ -77,9 +77,16 @@
         <input type="text" id="longUrl" placeholder="Enter your long URL here...">
         <button onclick="shortenUrl()">Shorten URL</button>
         <div class="result" id="result"></div>
+        <button id="copy" onclick="copyToClipboard()" style="display: none;">Copy to clipboard</button>
     </div>
 
     <script>
+        function copyToClipboard()
+        {
+            const shortUrl = document.getElementById('result').querySelector('a').href;
+            navigator.clipboard.writeText(shortUrl);
+            alert("Shortened URL copied to clipboard!");
+        }
         async function shortenUrl()
         {
             const longUrl = document.getElementById('longUrl').value;
@@ -98,6 +105,7 @@
                     body: longUrl
                 });
                 const shortUrl = await response.text();
+                document.getElementById('copy').style.display = 'block';
                 document.getElementById('result').innerHTML = `Your shortened URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
             } catch (error)
             {
