@@ -4,40 +4,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Easter Egg</title>
+    <title>URL Shortener</title>
     <style>
         body {
-            background-color: black;
-            color: white;
-            /* Hidden text */
             font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .result a {
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .result a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 
 <body>
-    <h1>Shortrl - shorten your url</h1>
 
-    <input type="text" name="longUrl" id="longUrl">
-    <label for="longUrl">Long URL</label>
-    <button onclick="shortenUrl()">Shorten</button>
+    <div class="container">
+        <h1>Shorten Your URL</h1>
+        <input type="text" id="longUrl" placeholder="Enter your long URL here...">
+        <button onclick="shortenUrl()">Shorten URL</button>
+        <div class="result" id="result"></div>
+    </div>
 
     <script>
-        //Ok(format!("https://shortrl.shuttleapp.rs/{id}")) endpoint is at shortrl.shuttleapp.rs/ and it take plain text as input
-        //also it returns plain text as output
-        //so we can use fetch api to send request to the server
-
         async function shortenUrl()
         {
             const longUrl = document.getElementById('longUrl').value;
-            const response = await fetch('https://shortrl.shuttleapp.rs/', {
-                method: 'POST',
-                body: longUrl
-            });
-            const shortUrl = await response.text();
-            alert(shortUrl);
+            if (!longUrl)
+            {
+                alert("Please enter a URL");
+                return;
+            }
+            try
+            {
+                const response = await fetch('https://shortrl.shuttleapp.rs/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: longUrl
+                });
+                const shortUrl = await response.text();
+                document.getElementById('result').innerHTML = `Your shortened URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
+            } catch (error)
+            {
+                document.getElementById('result').innerHTML = "An error occurred. Please try again.";
+            }
         }
     </script>
+
 </body>
 
 </html>

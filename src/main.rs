@@ -4,6 +4,7 @@ use rocket::fs::NamedFile;
 use rocket::{get, http::Status, post, response::Redirect, routes, State};
 use sqlx::{Error, PgPool};
 use std::path::Path;
+
 use tokio::time::{interval, Duration as TokioDuration};
 use url::Url;
 
@@ -16,20 +17,23 @@ async fn index() -> Option<NamedFile> {
 
 #[get("/<id>")]
 async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> {
-    let url: (String,) = sqlx::query_as("SELECT url FROM urls WHERE id = $1")
+    let url: (String,) = match sqlx::query_as("SELECT url FROM urls WHERE id = $1")
         .bind(id)
         .fetch_one(&**pool)
         .await
-        .map_err(|e| match e {
-            Error::RowNotFound => Status::NotFound,
-            _ => Status::InternalServerError,
-        })?;
+    {
+        Ok(result) => result,
+        Err(Error::RowNotFound) => return Err(Status::NotFound),
+        Err(_) => return Err(Status::InternalServerError),
+    };
     Ok(Redirect::to(url.0))
 }
 
 #[post("/", data = "<url>")]
 async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
-    let id = &nanoid::nanoid!(6);
+    //generate random integer from 6 to 20
+
+    let id = &nanoid::nanoid!(21);
     let p_url = match Url::parse(&url) {
         Ok(url) => url,
         Err(_) => return Err(Status::UnprocessableEntity),
@@ -101,4 +105,28 @@ async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::S
         .mount("/", routes![redirect, shorten])
         .manage(_pool);
     Ok(rocket.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
+    use sqlx::PgPool;
+
+    #[rocket::async_test]
+    async fn test_invalid_url() {
+        let pool = PgPool::connect(
+            std::env::var("CONN_STRING")
+                .expect("CONN_STRING not set")
+                .as_str(),
+        )
+        .await
+        .unwrap();
+        let client = Client::tracked(rocket::build().manage(pool)).await.unwrap();
+
+        let response = client.post("/").body("invalid-url").dispatch().await;
+
+        assert_eq!(response.status(), Status::UnprocessableEntity);
+    }
 }
