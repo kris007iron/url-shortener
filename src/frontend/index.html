@@ -105,7 +105,7 @@
                     body: longUrl
                 });
                 const shortUrl = await response.text();
-                document.getElementById('copy').style.display = 'block';
+                document.getElementById('copy').style.display = 'inline-block';
                 document.getElementById('result').innerHTML = `Your shortened URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
             } catch (error)
             {
