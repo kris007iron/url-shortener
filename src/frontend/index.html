@@ -8,9 +8,9 @@
     <meta name="keywords" content="url, shortener, short, link, fast, secure, free, no ads, no login, 24h life, rust">
     <meta name="author" content="Krzysztof Mrugała">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <link rel="shortcut icon" href="favicon.png" type="image/png">
-    
+
     <title>Free and Fast URL shortener</title>
     <style>
         body {
@@ -22,7 +22,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             color: #333;
         }
 
@@ -33,9 +33,11 @@
         .container {
             background: white;
             padding: 30px;
+            margin-top: 10%;
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
+            margin-bottom: 20px;
         }
 
         input[type="text"] {
@@ -74,6 +76,25 @@
         .result a:hover {
             text-decoration: underline;
         }
+
+        footer {
+            margin-top: auto;
+            padding: 10px 0;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        footer a:hover {
+            text-decoration: none;
+        }
     </style>
 </head>
 
@@ -86,6 +107,11 @@
         <div class="result" id="result"></div>
         <button id="copy" onclick="copyToClipboard()" style="display: none;">Copy to clipboard</button>
     </div>
+
+    <footer>
+        <p>Created by <a href="https://kris007iron.shuttleapp.rs/" target="_blank">Krzysztof Mrugała</a> &copy; 2024 All
+            rights reserved.</p>
+    </footer>
 
     <script>
         function copyToClipboard()
