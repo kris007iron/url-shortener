@@ -14,6 +14,12 @@ async fn index() -> Option<NamedFile> {
         .await
         .ok()
 }
+#[get("/favicon.png")]
+async fn favicon() -> Option<NamedFile> {
+    NamedFile::open(Path::new("src/frontend/favicon.png"))
+        .await
+        .ok()
+}
 
 #[get("/<id>")]
 async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> {
@@ -101,7 +107,7 @@ async fn delete_expired_urls(pool: PgPool) {
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     tokio::spawn(delete_expired_urls(_pool.clone()));
     let rocket = rocket::build()
-        .mount("/", routes![index])
+        .mount("/", routes![index, favicon])
         .mount("/", routes![redirect, shorten])
         .manage(_pool);
     Ok(rocket.into())
