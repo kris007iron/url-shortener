@@ -8,6 +8,12 @@ use std::path::Path;
 use tokio::time::{interval, Duration as TokioDuration};
 use url::Url;
 
+struct Record {
+    _id: String,
+    _url: String,
+    _expiration_date: DateTime<Utc>,
+}
+
 #[get("/")]
 async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("src/frontend/index.html"))
@@ -36,7 +42,11 @@ async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> 
 }
 
 #[post("/", data = "<url>")]
-async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
+async fn shorten(
+    url: String,
+    pool: &State<PgPool>,
+    _records: &State<Vec<Record>>,
+) -> Result<String, Status> {
     //generate random integer from 6 to 20
 
     let id = &nanoid::nanoid!(10);
@@ -106,9 +116,12 @@ async fn delete_expired_urls(pool: PgPool) {
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     tokio::spawn(delete_expired_urls(_pool.clone()));
+    //records local cache
+    let records: Vec<Record> = Vec::new();
     let rocket = rocket::build()
         .mount("/", routes![index, favicon])
         .mount("/", routes![redirect, shorten])
+        .manage(records)
         .manage(_pool);
     Ok(rocket.into())
 }
