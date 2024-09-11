@@ -83,7 +83,7 @@ async fn favicon() -> Option<NamedFile> {
 async fn redirect(
     id: String,
     pool: &State<PgPool>,
-    cache: &State<Cache>,
+    cache: &State<Arc<Cache>>,
 ) -> Result<Redirect, Status> {
     // Check if the URL is in the cache (by id)
     if let Some(record) = cache.cache_by_id.get(&id) {
@@ -118,7 +118,7 @@ async fn redirect(
 async fn shorten(
     url: String,
     pool: &State<PgPool>,
-    cache: &State<Cache>,
+    cache: &State<Arc<Cache>>,
 ) -> Result<String, Status> {
     // Check if URL is in the cache first (by url)
     if let Some(record) = cache.cache_by_url.get(&url) {
