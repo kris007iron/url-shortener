@@ -24,6 +24,8 @@ struct Cache {
 async fn clean_cache(cache: Arc<Cache>) {
     let mut interval = interval(TokioDuration::from_secs(3600)); // Run cleanup every 10 minutes
     loop {
+        println!("Cache by id size = {}", cache.cache_by_id.capacity());
+        println!("Cache by url size = {}", cache.cache_by_url.capacity());
         interval.tick().await;
         let now = Utc::now();
 
