@@ -1,4 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
+use dashmap::DashMap;
 use nanoid;
 use rocket::fs::NamedFile;
 use rocket::{get, http::Status, post, response::Redirect, routes, State};
@@ -7,6 +8,14 @@ use std::path::Path;
 
 use tokio::time::{interval, Duration as TokioDuration};
 use url::Url;
+
+struct Record {
+    _id: String,
+    _url: String,
+    _expiration_date: DateTime<Utc>,
+}
+
+type Cache = DashMap<String, Record>;
 
 #[get("/")]
 async fn index() -> Option<NamedFile> {
@@ -36,9 +45,18 @@ async fn redirect(id: String, pool: &State<PgPool>) -> Result<Redirect, Status> 
 }
 
 #[post("/", data = "<url>")]
-async fn shorten(url: String, pool: &State<PgPool>) -> Result<String, Status> {
-    //generate random integer from 6 to 20
+async fn shorten(
+    url: String,
+    pool: &State<PgPool>,
+    cache: &State<Cache>,
+) -> Result<String, Status> {
+    //TODO: work further with that
+    if let Some(record) = cache.get(&url) {
+        // If found in cache, return the cached URL
+        return Ok(format!("https://shortrl.shuttleapp.rs/{}", record._id));
+    }
 
+    //generate random integer from 6 to 20
     let id = &nanoid::nanoid!(10);
     let p_url = match Url::parse(&url) {
         Ok(url) => url,
@@ -105,11 +123,13 @@ async fn delete_expired_urls(pool: PgPool) {
 
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
+    let cache: Cache = DashMap::new();
+
     tokio::spawn(delete_expired_urls(_pool.clone()));
-    //TODO: cached records will be stored on redis cluster for test purposes
     let rocket = rocket::build()
         .mount("/", routes![index, favicon])
         .mount("/", routes![redirect, shorten])
+        .manage(cache)
         .manage(_pool);
     Ok(rocket.into())
 }
