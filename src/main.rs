@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use tokio::time::{interval, Duration as TokioDuration};
 
+/// Record struct for cached data
 #[derive(Clone)]
 struct Record {
     _id: String,
@@ -16,64 +17,23 @@ struct Record {
     _expiration_date: DateTime<Utc>,
 }
 
+/// Cache structure that can be managed with state
 struct Cache {
-    cache_by_id: DashMap<String, Record>,  // Cache for id->Record
-    cache_by_url: DashMap<String, Record>, // Cache for url->Record
+    /// Cache for id->Record
+    cache_by_id: DashMap<String, Record>,
+    /// Cache for url->Record
+    cache_by_url: DashMap<String, Record>,
 }
 
-async fn clean_cache(cache: Arc<Cache>) {
-    let mut interval = interval(TokioDuration::from_secs(3600)); // Run cleanup every 10 minutes
-    loop {
-        println!("Cache by id size = {}", cache.cache_by_id.capacity());
-        println!("Cache by url size = {}", cache.cache_by_url.capacity());
-        interval.tick().await;
-        let now = Utc::now();
-
-        // Clean up expired records from cache_by_id
-        cache
-            .cache_by_id
-            .retain(|_, record| record._expiration_date > now);
-
-        // Clean up expired records from cache_by_url
-        cache
-            .cache_by_url
-            .retain(|_, record| record._expiration_date > now);
-
-        prune_cache_if_needed(&cache);
-    }
-}
-
-fn prune_cache_if_needed(cache: &Cache) {
-    const CACHE_MAX_SIZE: usize = 100;
-
-    if cache.cache_by_id.len() > CACHE_MAX_SIZE {
-        // Find and remove the oldest record in cache_by_id
-        let mut oldest_key: Option<String> = None;
-        let mut oldest_expiration = Utc::now();
-
-        // Iterate to find the oldest record
-        for entry in cache.cache_by_id.iter() {
-            if entry.value()._expiration_date < oldest_expiration {
-                oldest_expiration = entry.value()._expiration_date;
-                oldest_key = Some(entry.key().clone());
-            }
-        }
-
-        // Remove the oldest record if found
-        if let Some(key) = oldest_key {
-            cache.cache_by_id.remove(&key);
-            // Also remove from cache_by_url by matching the ID
-            cache.cache_by_url.retain(|_, record| record._id != key);
-        }
-    }
-}
-
+/// Returns an index file
 #[get("/")]
 async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("src/frontend/index.html"))
         .await
         .ok()
 }
+
+/// Returns png file of favicons
 #[get("/favicon.png")]
 async fn favicon() -> Option<NamedFile> {
     NamedFile::open(Path::new("src/frontend/favicon.png"))
@@ -81,6 +41,11 @@ async fn favicon() -> Option<NamedFile> {
         .ok()
 }
 
+/// Redirects to original link if found in cache or db
+///
+/// # Examples
+///
+/// Calling shortrl.shuttleapp.rs/12345a if 12345a is found in cache then it quickly returns valid url if not then db is checkd for that id and same logic here but cache is also updated if request is repeated.
 #[get("/<id>")]
 async fn redirect(
     id: String,
@@ -116,6 +81,7 @@ async fn redirect(
     Ok(Redirect::to(url.0))
 }
 
+/// Creating new shorted url for given url in text/plain or returning existing one if this url was already shortened
 #[post("/", data = "<url>")]
 async fn shorten(
     url: String,
@@ -179,6 +145,7 @@ async fn shorten(
     Ok(format!("https://shortrl.shuttleapp.rs/{}", id))
 }
 
+/// This function manages state in particular the db one to keep it clean from expired links
 async fn delete_expired_urls(pool: PgPool) {
     let mut interval = interval(TokioDuration::from_secs(3600));
     loop {
@@ -193,6 +160,56 @@ async fn delete_expired_urls(pool: PgPool) {
     }
 }
 
+/// Analogical to [`delete_expired_urls`](delete_expired_urls())  but for cache
+async fn clean_cache(cache: Arc<Cache>) {
+    let mut interval = interval(TokioDuration::from_secs(3600)); // Run cleanup every 10 minutes
+    loop {
+        println!("Cache by id size = {}", cache.cache_by_id.capacity());
+        println!("Cache by url size = {}", cache.cache_by_url.capacity());
+        interval.tick().await;
+        let now = Utc::now();
+
+        // Clean up expired records from cache_by_id
+        cache
+            .cache_by_id
+            .retain(|_, record| record._expiration_date > now);
+
+        // Clean up expired records from cache_by_url
+        cache
+            .cache_by_url
+            .retain(|_, record| record._expiration_date > now);
+
+        prune_cache_if_needed(&cache);
+    }
+}
+
+/// Managing cache to keep it small in FIFO
+fn prune_cache_if_needed(cache: &Cache) {
+    const CACHE_MAX_SIZE: usize = 100;
+
+    if cache.cache_by_id.len() > CACHE_MAX_SIZE {
+        // Find and remove the oldest record in cache_by_id
+        let mut oldest_key: Option<String> = None;
+        let mut oldest_expiration = Utc::now();
+
+        // Iterate to find the oldest record
+        for entry in cache.cache_by_id.iter() {
+            if entry.value()._expiration_date < oldest_expiration {
+                oldest_expiration = entry.value()._expiration_date;
+                oldest_key = Some(entry.key().clone());
+            }
+        }
+
+        // Remove the oldest record if found
+        if let Some(key) = oldest_key {
+            cache.cache_by_id.remove(&key);
+            // Also remove from cache_by_url by matching the ID
+            cache.cache_by_url.retain(|_, record| record._id != key);
+        }
+    }
+}
+
+/// Main function that is an entry poin and runs web server
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     let cache = Arc::new(Cache {
