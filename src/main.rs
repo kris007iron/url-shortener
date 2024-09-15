@@ -45,7 +45,7 @@ async fn favicon() -> Option<NamedFile> {
 ///
 /// # Examples
 ///
-/// Calling shortrl.shuttleapp.rs/12345a if 12345a is found in cache then it quickly returns valid url if not then db is checkd for that id and same logic here but cache is also updated if request is repeated.
+/// Calling `shortrl.shuttleapp.rs/12345a` if `id=12345a` is found in cache then it quickly returns valid url if not then db is checkd for that id and same logic here but cache is also updated if request is repeated.
 #[get("/<id>")]
 async fn redirect(
     id: String,
