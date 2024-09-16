@@ -207,6 +207,23 @@ fn prune_cache_if_needed(cache: &Cache) {
             cache.cache_by_url.retain(|_, record| record._id != key);
         }
     }
+
+    if cache.cache_by_url.len() > CACHE_MAX_SIZE {
+        let mut oldest_key: Option<String> = None;
+        let mut oldest_expiration = Utc::now();
+
+        for entry in cache.cache_by_url.iter() {
+            if entry.value()._expiration_date < oldest_expiration {
+                oldest_expiration = entry.value()._expiration_date;
+                oldest_key = Some(entry.key().clone());
+            }
+        }
+
+        if let Some(key) = oldest_key {
+            cache.cache_by_url.remove(&key);
+            cache.cache_by_url.retain(|_, record| record._id != key);
+        }
+    }
 }
 
 /// Main function that is an entry poin and runs web server
