@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use tokio::time::{interval, Duration as TokioDuration};
 
-/// Record struct for cached data
+/// Represents a record for storing URL mappings with an expiration time.
 #[derive(Clone)]
 struct Record {
     _id: String,
@@ -17,15 +17,21 @@ struct Record {
     _expiration_date: DateTime<Utc>,
 }
 
-/// Cache structure that can be managed with state
+/// A cache structure for managing URL mappings. This cache allows fast lookups
+/// for shortened URLs and their corresponding full URLs, while maintaining
+/// expiration dates to clear out old entries.
 struct Cache {
-    /// Cache for id->Record
+    /// Cache mapping IDs to full URL records.
     cache_by_id: DashMap<String, Record>,
-    /// Cache for url->Record
+    /// Cache mapping full URLs to shortened ID records.
     cache_by_url: DashMap<String, Record>,
 }
 
-/// Returns an index file
+/// Serves the index page (HTML file) to the user when they visit the root URL.
+///
+/// # Returns
+/// - The `index.html` file if it exists.
+/// - `None` if the file is not found.
 #[get("/")]
 async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("src/frontend/index.html"))
@@ -33,7 +39,11 @@ async fn index() -> Option<NamedFile> {
         .ok()
 }
 
-/// Returns png file of favicons
+/// Serves the favicon image for the web page.
+///
+/// # Returns
+/// - The `favicon.png` file if it exists.
+/// - `None` if the file is not found.
 #[get("/favicon.png")]
 async fn favicon() -> Option<NamedFile> {
     NamedFile::open(Path::new("src/frontend/favicon.png"))
@@ -41,11 +51,22 @@ async fn favicon() -> Option<NamedFile> {
         .ok()
 }
 
-/// Redirects to original link if found in cache or db
+/// Redirects a user to the full URL based on the provided shortened ID.
+/// It checks the cache first, and if not found, queries the database.
 ///
-/// # Examples
+/// # Arguments
+/// - `id`: The shortened ID from the URL path.
+/// - `pool`: The database connection pool provided by Rocket.
+/// - `cache`: The cache state containing URL mappings.
 ///
-/// Calling `shortrl.shuttleapp.rs/12345a` if `id=12345a` is found in cache then it quickly returns valid url if not then db is checkd for that id and same logic here but cache is also updated if request is repeated.
+/// # Returns
+/// - A `Redirect` to the full URL if found.
+/// - A `Status::NotFound` if the ID is not found.
+/// - A `Status::InternalServerError` if a database query fails.
+///
+/// # Example
+/// Visiting `http://shortrl.shuttleapp.rs/12345a` will redirect the user
+/// to the full URL associated with the ID `12345a`.
 #[get("/<id>")]
 async fn redirect(
     id: String,
@@ -81,7 +102,22 @@ async fn redirect(
     Ok(Redirect::to(url.0))
 }
 
-/// Creating new shorted url for given url in text/plain or returning existing one if this url was already shortened
+/// Creates or returns a shortened URL for the provided full URL.
+/// If the URL has already been shortened, the existing shortened URL is returned.
+/// Otherwise, a new shortened URL is generated and stored in the database and cache.
+///
+/// # Arguments
+/// - `url`: The full URL to shorten.
+/// - `pool`: The database connection pool provided by Rocket.
+/// - `cache`: The cache state containing URL mappings.
+///
+/// # Returns
+/// - The shortened URL if successful.
+/// - A `Status::InternalServerError` if the database operation fails.
+///
+/// # Example
+/// Sending a POST request to `/` with the URL `https://example.com` will return
+/// a shortened URL like `https://shortrl.shuttleapp.rs/abcd1234`.
 #[post("/", data = "<url>")]
 async fn shorten(
     url: String,
@@ -145,7 +181,11 @@ async fn shorten(
     Ok(format!("https://shortrl.shuttleapp.rs/{}", id))
 }
 
-/// This function manages state in particular the db one to keep it clean from expired links
+/// Periodically deletes expired URLs from the database based on their expiration date.
+/// Runs every hour in the background.
+///
+/// # Arguments
+/// - `pool`: The database connection pool used for the deletion query.
 async fn delete_expired_urls(pool: PgPool) {
     let mut interval = interval(TokioDuration::from_secs(3600));
     loop {
@@ -160,7 +200,11 @@ async fn delete_expired_urls(pool: PgPool) {
     }
 }
 
-/// Analogical to [`delete_expired_urls`](delete_expired_urls())  but for cache
+/// Periodically cleans up expired entries from the cache based on their expiration dates.
+/// Also manages cache size by removing the oldest entries if the cache grows too large.
+///
+/// # Arguments
+/// - `cache`: The shared cache containing URL mappings.
 async fn clean_cache(cache: Arc<Cache>) {
     let mut interval = interval(TokioDuration::from_secs(3600)); // Run cleanup every 10 minutes
     loop {
@@ -183,7 +227,10 @@ async fn clean_cache(cache: Arc<Cache>) {
     }
 }
 
-/// Managing cache to keep it small in FIFO
+/// Prunes the cache if its size exceeds a predefined maximum limit (FIFO strategy).
+///
+/// # Arguments
+/// - `cache`: The cache structure to be pruned.
 fn prune_cache_if_needed(cache: &Cache) {
     const CACHE_MAX_SIZE: usize = 100;
 
@@ -226,7 +273,7 @@ fn prune_cache_if_needed(cache: &Cache) {
     }
 }
 
-/// Main function that is an entry poin and runs web server
+/// Main function that is an entry poin and runs web server and cleaning in background
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] _pool: PgPool) -> shuttle_rocket::ShuttleRocket {
     let cache = Arc::new(Cache {
